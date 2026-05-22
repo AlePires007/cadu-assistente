@@ -563,7 +563,7 @@
     }
 
     function explicar_TesteHidrometro() {
-        let texto = `<strong>Teste do Relógio (Hidrômetro):</strong><br><br>1. Feche todas as torneiras do imóvel e não use banheiros;<br>2. Certifique-se de que não há aparelhos de lavar funcionando;<br>3. Olhe fixamente para a engrenagem menor vermelha do relógio.<br><br>Se ela continuar rodando com tudo fechado, <strong>há um vazamento ativo</strong> na entrada da rua!`;
+        let texto = `<strong>Teste do Relógio (Hidrômetro):</strong><br><br>1. Feche todas as torneiras do imóvel e não use banheiros;<br>2. Certifique-se de que não há aparelhos de lavar funcionando;<br>3. Olhe fixamente para a engrenagem menor vermelha do relógio.<br><br>Se ela continuar rodando com tudo fechado, <strong>provavelmente existe um vazamento oculto no imóvel</strong> na entrada da rua!`;
         limparHistoricoEAdicionarBalao(texto);
         agendarTimeout(() => carregarEtapa('interacaoZ'), 9000);
     }
