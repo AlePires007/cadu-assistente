@@ -176,9 +176,9 @@
             transition: all 0.3s ease;
         }
 
-        .zoom-registro-anterior { transform: scale(3.5) translate(0%, -72%); }
-        .zoom-data-anterior     { transform: scale(3.5) translate(-47%, -73%); }
-        .zoom-proxima-leitura   { transform: scale(3.5) translate(-70%, -73%); }
+        .zoom-registro-atual-conta { transform: scale(3.5) translate(0%, -72%); }
+        .zoom-data-atual-conta     { transform: scale(3.5) translate(-47%, -73%); }
+        .zoom-proxima-leitura      { transform: scale(3.5) translate(-70%, -73%); }
         
         .zoom-hidrometro-exemplo {
             width: 100% !important;
@@ -199,12 +199,12 @@
         }
 
         .input-step-container label {
-            font-size: 13px;
-            color: #555;
-            font-weight: bold;
+            font-size: 14px;
+            color: #333;
         }
 
-        .input-step-container input {
+        .input-step-container input[type="date"],
+        .input-step-container input[type="number"] {
             width: 100%;
             padding: 10px;
             margin-top: 6px;
@@ -240,6 +240,7 @@
     const chatBox = document.getElementById('chatBox');
     let timeoutsAtivos = [];
     let dadosContaAlta = {};
+    let dadosSimulacao = {};
 
     function agendarTimeout(callback, delay) {
         const id = setTimeout(callback, delay);
@@ -271,15 +272,369 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    function tratarErroImagem(img, tipo) {
+        img.onerror = null; 
+        img.style.transform = 'none'; 
+        img.style.position = 'static';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        
+        const textoPlaceholder = tipo === 'conta' ? '📋 [Imagem da Conta]' : '⏱️ [Imagem do Hidrômetro]';
+        img.src = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='150'><rect width='100%' height='100%' fill='%23f3f4f6'/><text x='50%' y='55%' font-family='sans-serif' font-size='14' font-weight='bold' fill='%231e3a8a' text-anchor='middle'>${textoPlaceholder}</text></svg>`;
+    }
+
+    // --- CÓDIGO DA SIMULAÇÃO DE FATURA ---
+    function iniciarSimulacaoFatura() {
+        dadosSimulacao = {
+            dataLeituraConta: '',
+            dataProxima: '',
+            leituraAtualConta: '',
+            leituraHidrometro: '',
+            dataHidrometro: '',
+            previsaoM3: 0
+        };
+        const textoApresentacao = `Para te ajudar, faremos uma simulação detalhada da sua fatura.<br><br>⚠️ <strong>Atenção aos requisitos:</strong><br>1. Esteja com a sua <strong>conta de água mais recente</strong> em mãos.<br>2. Tenha <strong>acesso visual ao hidrômetro</strong>.`;
+        
+        limparHistoricoEAdicionarBalao(textoApresentacao);
+
+        const containerBotoes = document.createElement('div');
+        containerBotoes.className = 'options-container';
+        containerBotoes.innerHTML = `
+            <button class="btn-option" onclick="sim_passo_DataLeituraConta()">Estou Pronto, Vamos Começar!</button>
+            <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
+        `;
+        chatBox.appendChild(containerBotoes);
+    }
+
+    function sim_passo_DataLeituraConta() {
+        limparHistoricoEAdicionarBalao("<strong>Passo 1 de 5:</strong><br>Informe a data da <strong>Leitura Atual</strong> indicada na sua conta de água:");
+        const boxZoom = document.createElement('div');
+        boxZoom.className = 'bill-zoom-container';
+        boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-data-atual-conta" onerror="tratarErroImagem(this, 'conta')" alt="Conta DAAE">`;
+        chatBox.insertBefore(boxZoom, chatBox.firstChild);
+
+        const container = document.createElement('div');
+        container.className = 'input-step-container';
+        container.innerHTML = `
+            <input type="date" id="sim_step_dataLeituraConta" value="${dadosSimulacao.dataLeituraConta}">
+            <div class="button-group">
+                <button class="btn-option" onclick="sim_salvar_DataLeituraConta()">Avançar</button>
+                <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
+            </div>
+        `;
+        chatBox.appendChild(container);
+    }
+
+    function sim_salvar_DataLeituraConta() {
+        const valor = document.getElementById('sim_step_dataLeituraConta').value;
+        if(!valor) { alert("Por favor, informe a data da leitura atual da conta."); return; }
+        dadosSimulacao.dataLeituraConta = valor;
+        sim_passo_DataProxima();
+    }
+
+    function sim_passo_DataProxima() {
+        limparHistoricoEAdicionarBalao("<strong>Passo 2 de 5:</strong><br>Informe a data da Próxima Leitura informada na conta:");
+        const boxZoom = document.createElement('div');
+        boxZoom.className = 'bill-zoom-container';
+        boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-proxima-leitura" onerror="tratarErroImagem(this, 'conta')" alt="Conta DAAE">`;
+        chatBox.insertBefore(boxZoom, chatBox.firstChild);
+
+        const container = document.createElement('div');
+        container.className = 'input-step-container';
+        container.innerHTML = `
+            <button class="btn-back" onclick="sim_passo_DataLeituraConta()">⬅️ Voltar à etapa anterior</button>
+            <input type="date" id="sim_step_dataProxima" value="${dadosSimulacao.dataProxima}">
+            <div class="button-group">
+                <button class="btn-option" onclick="sim_salvar_DataProxima()">Avançar</button>
+                <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
+            </div>
+        `;
+        chatBox.appendChild(container);
+    }
+
+    function sim_salvar_DataProxima() {
+        const valor = document.getElementById('sim_step_dataProxima').value;
+        if(!valor) { alert("Por favor, informe a data da próxima leitura."); return; }
+        dadosSimulacao.dataProxima = valor;
+        sim_passo_LeituraAtualConta();
+    }
+
+    function sim_passo_LeituraAtualConta() {
+        limparHistoricoEAdicionarBalao("<strong>Passo 3 de 5:</strong><br>Informe o número do <strong>Registro Atual</strong> impresso na sua conta:");
+        const boxZoom = document.createElement('div');
+        boxZoom.className = 'bill-zoom-container';
+        boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-registro-atual-conta" onerror="tratarErroImagem(this, 'conta')" alt="Conta DAAE">`;
+        chatBox.insertBefore(boxZoom, chatBox.firstChild);
+
+        const container = document.createElement('div');
+        container.className = 'input-step-container';
+        container.innerHTML = `
+            <button class="btn-back" onclick="sim_passo_DataProxima()">⬅️ Voltar à etapa anterior</button>
+            <input type="number" id="sim_step_leituraAtualConta" placeholder="Exemplo: 815" value="${dadosSimulacao.leituraAtualConta}">
+            <div class="button-group">
+                <button class="btn-option" onclick="sim_salvar_LeituraAtualConta()">Avançar</button>
+                <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
+            </div>
+        `;
+        chatBox.appendChild(container);
+    }
+
+    function sim_salvar_LeituraAtualConta() {
+        const valor = parseFloat(document.getElementById('sim_step_leituraAtualConta').value);
+        if(isNaN(valor)) { alert("Por favor, digite o número do Registro Atual da conta."); return; }
+        dadosSimulacao.leituraAtualConta = valor;
+        sim_passo_LeituraHidrometro();
+    }
+
+    function sim_passo_LeituraHidrometro() {
+        limparHistoricoEAdicionarBalao("<strong>Passo 4 de 5:</strong><br>Olhe para o mostrador físico do seu hidrômetro (relógio) e digite aqui apenas os <strong>números pretos</strong> atuais.<br><br>Veja abaixo um exemplo: neste caso, bastaria digitar <strong>0003</strong> ou <strong>3</strong>.");
+        
+        const boxZoom = document.createElement('div');
+        boxZoom.className = 'bill-zoom-container';
+        boxZoom.innerHTML = `<img src="Foto_HM.jpg" class="zoom-hidrometro-exemplo" onerror="tratarErroImagem(this, 'hidrometro')" alt="Exemplo Hidrômetro">`;
+        chatBox.insertBefore(boxZoom, chatBox.firstChild);
+
+        const container = document.createElement('div');
+        container.className = 'input-step-container';
+        container.innerHTML = `
+            <button class="btn-back" onclick="sim_passo_LeituraAtualConta()">⬅️ Voltar à etapa anterior</button>
+            <input type="number" id="sim_step_leituraHidrometro" placeholder="Exemplo: 820" value="${dadosSimulacao.leituraHidrometro}">
+            <div class="button-group">
+                <button class="btn-option" onclick="sim_salvar_LeituraHidrometro()">Avançar</button>
+                <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
+            </div>
+        `;
+        chatBox.appendChild(container);
+    }
+
+    function sim_salvar_LeituraHidrometro() {
+        const valor = parseFloat(document.getElementById('sim_step_leituraHidrometro').value);
+        if(isNaN(valor)) { alert("Por favor, informe os números pretos do hidrômetro."); return; }
+        dadosSimulacao.leituraHidrometro = valor;
+        sim_passo_ViuHoje();
+    }
+
+    function sim_passo_ViuHoje() {
+        limparHistoricoEAdicionarBalao("<strong>Passo 5 de 5:</strong><br>Você viu esse número no hidrômetro hoje?");
+        
+        const container = document.createElement('div');
+        container.className = 'input-step-container';
+        container.innerHTML = `
+            <button class="btn-back" onclick="sim_passo_LeituraHidrometro()">⬅️ Voltar à etapa anterior</button>
+            <div class="button-group">
+                <button class="btn-option" onclick="sim_salvar_ViuHoje(true)">Sim, vi hoje</button>
+                <button class="btn-option" onclick="sim_salvar_ViuHoje(false)">Não, foi em outro dia</button>
+                <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
+            </div>
+        `;
+        chatBox.appendChild(container);
+    }
+
+    function sim_salvar_ViuHoje(viuHoje) {
+        if(viuHoje) {
+            const hoje = new Date();
+            const ano = hoje.getFullYear();
+            const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+            const dia = String(hoje.getDate()).padStart(2, '0');
+            dadosSimulacao.dataHidrometro = `${ano}-${mes}-${dia}`;
+            sim_executarCalculoFinal();
+        } else {
+            sim_passo_PedirDataAtualManual();
+        }
+    }
+
+    function sim_passo_PedirDataAtualManual() {
+        limparHistoricoEAdicionarBalao("Por favor, selecione abaixo a data em que você realizou essa leitura no hidrômetro:");
+        
+        const container = document.createElement('div');
+        container.className = 'input-step-container';
+        container.innerHTML = `
+            <button class="btn-back" onclick="sim_passo_ViuHoje()">⬅️ Voltar à etapa anterior</button>
+            <input type="date" id="sim_step_dataHidrometro" value="${dadosSimulacao.dataHidrometro}">
+            <div class="button-group">
+                <button class="btn-option" onclick="sim_salvar_DataAtualManual()">Avançar</button>
+                <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
+            </div>
+        `;
+        chatBox.appendChild(container);
+    }
+
+    function sim_salvar_DataAtualManual() {
+        const valor = document.getElementById('sim_step_dataHidrometro').value;
+        if(!valor) { alert("Por favor, selecione uma data válida."); return; }
+        dadosSimulacao.dataHidrometro = valor;
+        sim_executarCalculoFinal();
+    }
+
+    function sim_executarCalculoFinal() {
+        const dHidrometro = new Date(dadosSimulacao.dataHidrometro.replace(/-/g, '/'));
+        const dLeituraConta = new Date(dadosSimulacao.dataLeituraConta.replace(/-/g, '/'));
+        const dProxima = new Date(dadosSimulacao.dataProxima.replace(/-/g, '/'));
+        const msPorDia = 1000 * 60 * 60 * 24;
+
+        const dado1 = Math.round((dHidrometro - dLeituraConta) / msPorDia); 
+        const dado2 = Math.round((dProxima - dHidrometro) / msPorDia);  
+
+        if (dado1 <= 0 || (dado1 + dado2) <= 0) {
+            alert("Erro nas datas digitadas. Verifique a ordem cronológica em relação à emissão da conta.");
+            return;
+        }
+
+        const dado3 = dadosSimulacao.leituraHidrometro - dadosSimulacao.leituraAtualConta; 
+        const dado4 = dado3 / dado1; 
+        const dado5 = dado1 + dado2; 
+        const dado6 = Math.round(dado4 * dado5); 
+
+        dadosSimulacao.previsaoM3 = dado6;
+
+        limparHistoricoEAdicionarBalao("Simulando dados...", false);
+        
+        agendarTimeout(() => {
+            const painelResultado = `Dias desde a emissão da conta: <strong>${dado1}</strong><br>` +
+                                    `M³ consumidos no período: <strong>${dado3} m³</strong><br>` +
+                                    `Dias restantes até o próximo ciclo: <strong>${dado2}</strong><br>` +
+                                    `M³ previsto para o fechamento da conta: <strong>${dado6} m³</strong><br><br>` +
+                                    `⚠️ <em>Essa é uma simulação volumétrica e o valor final poderá mudar dependendo do seu consumo diário.</em>`;
+
+            limparHistoricoEAdicionarBalao(painelResultado);
+            
+            agendarTimeout(() => {
+                sim_passo_CategoriasImovel();
+            }, 4000);
+        }, 1500);
+    }
+
+    function sim_passo_CategoriasImovel() {
+        const texto = "Para calcular o valor estimado da sua conta, selecione abaixo a categoria do seu imóvel:";
+        limparHistoricoEAdicionarBalao(texto);
+
+        const container = document.createElement('div');
+        container.className = 'input-step-container';
+        container.innerHTML = `
+            <div style="display: flex; align-items: center; margin-bottom: 12px; background: #f9f9f9; padding: 14px; border-radius: 8px;">
+                <label style="display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer; margin: 0; width: 100%;">
+                    <input type="radio" name="tipo_imovel" id="radio_residencia" style="margin: 0; width: 20px; height: 20px;">
+                    🏠 Só Residência
+                </label>
+            </div>
+            
+            <div style="display: flex; align-items: center; margin-bottom: 20px; background: #f9f9f9; padding: 14px; border-radius: 8px;">
+                <label style="display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer; margin: 0; width: 100%;">
+                    <input type="radio" name="tipo_imovel" id="radio_comercio" style="margin: 0; width: 20px; height: 20px;">
+                    🏢 Só Comércio
+                </label>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-option" onclick="sim_calcularValorFinal()">Calcular Valor Financeiro</button>
+                <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
+            </div>
+        `;
+        chatBox.appendChild(container);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function sim_calcularValorFinal() {
+        const radRes = document.getElementById('radio_residencia').checked;
+        const radCom = document.getElementById('radio_comercio').checked;
+
+        if (!radRes && !radCom) {
+            alert("Por favor, selecione uma opção (Residência ou Comércio).");
+            return;
+        }
+
+        const m3 = dadosSimulacao.previsaoM3 || 0;
+        let valorTotal = 0;
+        let detalheCalculo = "";
+        const categoriaSelecionada = radRes ? "Residência" : "Comércio";
+
+        if (radRes) {
+            // Regras progressivas - Residência
+            if (m3 <= 10) {
+                valorTotal = 70.72;
+                detalheCalculo = `• Faixa de 0 a 10 m³ (Valor Fixo): <strong>R$ 70,72</strong>`;
+            } else if (m3 <= 20) {
+                const faixa2 = m3 - 10;
+                valorTotal = 70.72 + (faixa2 * 14.38);
+                detalheCalculo = `• Valor Fixo (Até 10 m³): R$ 70,72<br>` +
+                                 `• Faixa de 11 a 20 m³: ${faixa2} m³ × R$ 14,38 = R$ ${(faixa2 * 14.38).toFixed(2)}`;
+            } else if (m3 <= 50) {
+                const faixa3 = m3 - 20;
+                valorTotal = 70.72 + (10 * 14.38) + (faixa3 * 21.54);
+                detalheCalculo = `• Valor Fixo (Até 10 m³): R$ 70,72<br>` +
+                                 `• Faixa de 11 a 20 m³: 10 m³ × R$ 14,38 = R$ 143,80<br>` +
+                                 `• Faixa de 21 a 50 m³: ${faixa3} m³ × R$ 21,54 = R$ ${(faixa3 * 21.54).toFixed(2)}`;
+            } else if (m3 <= 100) {
+                const faixa4 = m3 - 50;
+                valorTotal = 70.72 + (10 * 14.38) + (30 * 21.54) + (faixa4 * 31.10);
+                detalheCalculo = `• Valor Fixo (Até 10 m³): R$ 70,72<br>` +
+                                 `• Faixa de 11 a 20 m³: 10 m³ × R$ 14,38 = R$ 143,80<br>` +
+                                 `• Faixa de 21 a 50 m³: 30 m³ × R$ 21,54 = R$ 646,20<br>` +
+                                 `• Faixa de 51 a 100 m³: ${faixa4} m³ × R$ 31,10 = R$ ${(faixa4 * 31.10).toFixed(2)}`;
+            } else {
+                const faixa5 = m3 - 100;
+                valorTotal = 70.72 + (10 * 14.38) + (30 * 21.54) + (50 * 31.10) + (faixa5 * 35.82);
+                detalheCalculo = `• Valor Fixo (Até 10 m³): R$ 70,72<br>` +
+                                 `• Faixa de 11 a 20 m³: 10 m³ × R$ 14,38 = R$ 143,80<br>` +
+                                 `• Faixa de 21 a 50 m³: 30 m³ × R$ 21,54 = R$ 646,20<br>` +
+                                 `• Faixa de 51 a 100 m³: 50 m³ × R$ 31,10 = R$ 1.555,00<br>` +
+                                 `• Faixa acima de 100 m³: ${faixa5} m³ × R$ 35,82 = R$ ${(faixa5 * 35.82).toFixed(2)}`;
+            }
+        } else {
+            // Regras progressivas - Comércio
+            if (m3 <= 15) {
+                valorTotal = 188.84;
+                detalheCalculo = `• Faixa de 0 a 15 m³ (Valor Fixo): <strong>R$ 188,84</strong>`;
+            } else if (m3 <= 30) {
+                const faixa2 = m3 - 15;
+                valorTotal = 188.84 + (faixa2 * 24.06);
+                detalheCalculo = `• Valor Fixo (Até 15 m³): R$ 188,84<br>` +
+                                 `• Faixa de 16 a 30 m³: ${faixa2} m³ × R$ 24,06 = R$ ${(faixa2 * 24.06).toFixed(2)}`;
+            } else if (m3 <= 50) {
+                const faixa3 = m3 - 30;
+                valorTotal = 188.84 + (15 * 24.06) + (faixa3 * 35.82);
+                detalheCalculo = `• Valor Fixo (Até 15 m³): R$ 188,84<br>` +
+                                 `• Faixa de 16 a 30 m³: 15 m³ × R$ 24,06 = R$ 360,90<br>` +
+                                 `• Faixa de 31 a 50 m³: ${faixa3} m³ × R$ 35,82 = R$ ${(faixa3 * 35.82).toFixed(2)}`;
+            } else if (m3 <= 100) {
+                const faixa4 = m3 - 50;
+                valorTotal = 188.84 + (15 * 24.06) + (20 * 35.82) + (faixa4 * 43.32);
+                detalheCalculo = `• Valor Fixo (Até 15 m³): R$ 188,84<br>` +
+                                 `• Faixa de 16 a 30 m³: 15 m³ × R$ 24,06 = R$ 360,90<br>` +
+                                 `• Faixa de 31 a 50 m³: 20 m³ × R$ 35,82 = R$ 716,40<br>` +
+                                 `• Faixa de 51 a 100 m³: ${faixa4} m³ × R$ 43,32 = R$ ${(faixa4 * 43.32).toFixed(2)}`;
+            } else {
+                const faixa5 = m3 - 100;
+                valorTotal = 188.84 + (15 * 24.06) + (20 * 35.82) + (50 * 43.32) + (faixa5 * 48.00);
+                detalheCalculo = `• Valor Fixo (Até 15 m³): R$ 188,84<br>` +
+                                 `• Faixa de 16 a 30 m³: 15 m³ × R$ 24,06 = R$ 360,90<br>` +
+                                 `• Faixa de 31 a 50 m³: 20 m³ × R$ 35,82 = R$ 716,40<br>` +
+                                 `• Faixa de 51 a 100 m³: 50 m³ × R$ 43,32 = R$ 2.166,00<br>` +
+                                 `• Faixa acima de 100 m³: ${faixa5} m³ × R$ 48,00 = R$ ${(faixa5 * 48.00).toFixed(2)}`;
+            }
+        }
+
+        const textoResultado = `📋 <strong>Resultado da Simulação Financeira</strong><br><br>` +
+                               `• Categoria: <strong>${categoriaSelecionada}</strong><br>` +
+                               `• Previsão de Consumo Final: <strong>${m3} m³</strong><br><br>` +
+                               `<strong>Demonstrativo das Faixas:</strong><br>${detalheCalculo}<br><br>` +
+                               `💰 <strong>Valor Total Estimado:</strong><br>` +
+                               `<span style="font-size: 20px; color: var(--dark-blue); font-weight: bold;">R$ ${valorTotal.toFixed(2).replace('.', ',')}</span>`;
+        
+        limparHistoricoEAdicionarBalao(textoResultado);
+        agendarTimeout(() => carregarEtapa('interacaoZ'), 9000);
+    }
+
+
     // --- CÓDIGO DA ANÁLISE DE CONTA ALTA ---
     function iniciarApresentacaoContaAlta() {
         dadosContaAlta = {
-            dataAnterior: '',
-            leituraAnterior: '',
+            dataLeituraConta: '',
+            leituraAtualConta: '',
             dataProxima: '',
-            leituraAtual: '',
+            leituraHidrometro: '',
             viuHoje: '',
-            dataAtual: '',
+            dataHidrometro: '',
             moradores: ''
         };
         const textoApresentacao = `Para te ajudar, faremos uma análise detalhada do consumo atual do seu imóvel.<br><br>Com isso, teremos um panorama completo da situação para identificar possíveis alterações ou vazamentos.<br><br>⚠️ <strong>Atenção aos requisitos obrigatórios antes de começar:</strong><br>1. Esteja com a sua <strong>conta de água mais recente</strong> em mãos.<br>2. Tenha <strong>acesso visual ao hidrômetro</strong> (relógio de água) ou uma <strong>foto recente</strong> dele tirada hoje.`;
@@ -289,79 +644,76 @@
         const containerBotoes = document.createElement('div');
         containerBotoes.className = 'options-container';
         containerBotoes.innerHTML = `
-            <button class="btn-option" onclick="passo_DataAnterior()">Estou Pronto, Vamos Começar!</button>
+            <button class="btn-option" onclick="passo_DataLeituraConta()">Estou Pronto, Vamos Começar!</button>
             <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
         `;
         chatBox.appendChild(containerBotoes);
     }
 
-    // Passo 1: Data da Leitura Constante na Conta
-    function passo_DataAnterior() {
-        limparHistoricoEAdicionarBalao("<strong>Passo 1 de 6:</strong><br>Localize o campo Leitura em sua conta e informe a data :");
+    function passo_DataLeituraConta() {
+        limparHistoricoEAdicionarBalao("<strong>Passo 1 de 6:</strong><br>Localize a data da <strong>Leitura Atual</strong> informada em sua conta de água e insira abaixo:");
         const boxZoom = document.createElement('div');
         boxZoom.className = 'bill-zoom-container';
-        boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-data-anterior" alt="Conta DAAE">`;
+        boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-data-atual-conta" onerror="tratarErroImagem(this, 'conta')" alt="Conta DAAE">`;
         chatBox.insertBefore(boxZoom, chatBox.firstChild);
 
         const container = document.createElement('div');
         container.className = 'input-step-container';
         container.innerHTML = `
-            <input type="date" id="step_dataAnterior" value="${dadosContaAlta.dataAnterior}">
+            <input type="date" id="step_dataLeituraConta" value="${dadosContaAlta.dataLeituraConta}">
             <div class="button-group">
-                <button class="btn-option" onclick="salvar_DataAnterior()">Avançar</button>
+                <button class="btn-option" onclick="salvar_DataLeituraConta()">Avançar</button>
                 <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
             </div>
         `;
         chatBox.appendChild(container);
     }
 
-    function salvar_DataAnterior() {
-        const valor = document.getElementById('step_dataAnterior').value;
-        if(!valor) { alert("Por favor, informe a data anterior indicada no talão."); return; }
-        dadosContaAlta.dataAnterior = valor;
-        passo_LeituraAnterior();
+    function salvar_DataLeituraConta() {
+        const valor = document.getElementById('step_dataLeituraConta').value;
+        if(!valor) { alert("Por favor, informe a data da leitura atual indicada na fatura."); return; }
+        dadosContaAlta.dataLeituraConta = valor;
+        passo_LeituraAtualConta();
     }
 
-    // Passo 2: Registro Anterior
-    function passo_LeituraAnterior() {
-        limparHistoricoEAdicionarBalao("<strong>Passo 2 de 6:</strong><br>Agora informe o número que está dentro do campo Registro Anterior:");
+    function passo_LeituraAtualConta() {
+        limparHistoricoEAdicionarBalao("<strong>Passo 2 de 6:</strong><br>Agora informe o número impresso que está dentro do campo <strong>Registro Atual</strong> (ou Leitura Atual) na sua conta:");
         const boxZoom = document.createElement('div');
         boxZoom.className = 'bill-zoom-container';
-        boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-registro-anterior" alt="Conta DAAE">`;
+        boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-registro-atual-conta" onerror="tratarErroImagem(this, 'conta')" alt="Conta DAAE">`;
         chatBox.insertBefore(boxZoom, chatBox.firstChild);
 
         const container = document.createElement('div');
         container.className = 'input-step-container';
         container.innerHTML = `
-            <button class="btn-back" onclick="passo_DataAnterior()">⬅️ Voltar à etapa anterior</button>
-            <input type="number" id="step_leituraAnterior" placeholder="Exemplo: 802" value="${dadosContaAlta.leituraAnterior}">
+            <button class="btn-back" onclick="passo_DataLeituraConta()">⬅️ Voltar à etapa anterior</button>
+            <input type="number" id="step_leituraAtualConta" placeholder="Exemplo: 815" value="${dadosContaAlta.leituraAtualConta}">
             <div class="button-group">
-                <button class="btn-option" onclick="salvar_LeituraAnterior()">Avançar</button>
+                <button class="btn-option" onclick="salvar_LeituraAtualConta()">Avançar</button>
                 <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
             </div>
         `;
         chatBox.appendChild(container);
     }
 
-    function salvar_LeituraAnterior() {
-        const valor = parseFloat(document.getElementById('step_leituraAnterior').value);
-        if(isNaN(valor)) { alert("Por favor, digite o número do Registro Anterior."); return; }
-        dadosContaAlta.leituraAnterior = valor;
+    function salvar_LeituraAtualConta() {
+        const valor = parseFloat(document.getElementById('step_leituraAtualConta').value);
+        if(isNaN(valor)) { alert("Por favor, digite o número do Registro Atual da conta."); return; }
+        dadosContaAlta.leituraAtualConta = valor;
         passo_DataProxima();
     }
 
-    // Passo 3: Data da Próxima Leitura
     function passo_DataProxima() {
-        limparHistoricoEAdicionarBalao("<strong>Passo 3 de 6:</strong><br>Localize e digite a data da Próxima Leitura:");
+        limparHistoricoEAdicionarBalao("<strong>Passo 3 de 6:</strong><br>Localize e digite a data da Próxima Leitura prevista na conta:");
         const boxZoom = document.createElement('div');
         boxZoom.className = 'bill-zoom-container';
-        boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-proxima-leitura" alt="Conta DAAE">`;
+        boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-proxima-leitura" onerror="tratarErroImagem(this, 'conta')" alt="Conta DAAE">`;
         chatBox.insertBefore(boxZoom, chatBox.firstChild);
 
         const container = document.createElement('div');
         container.className = 'input-step-container';
         container.innerHTML = `
-            <button class="btn-back" onclick="passo_LeituraAnterior()">⬅️ Voltar à etapa anterior</button>
+            <button class="btn-back" onclick="passo_LeituraAtualConta()">⬅️ Voltar à etapa anterior</button>
             <input type="date" id="step_dataProxima" value="${dadosContaAlta.dataProxima}">
             <div class="button-group">
                 <button class="btn-option" onclick="salvar_DataProxima()">Avançar</button>
@@ -375,46 +727,44 @@
         const valor = document.getElementById('step_dataProxima').value;
         if(!valor) { alert("Por favor, selecione a data da próxima leitura."); return; }
         dadosContaAlta.dataProxima = valor;
-        passo_LeituraAtual();
+        passo_LeituraHidrometro();
     }
 
-    // Passo 4: Número no Hidrômetro (Inclusão do Exemplo Foto_HM)
-    function passo_LeituraAtual() {
-        limparHistoricoEAdicionarBalao("<strong>Passo 4 de 6:</strong><br>Olhe para o mostrador do seu hidrômetro (relógio) e digite aqui apenas os <strong>números pretos</strong>.<br><br>Veja um exemplo a cima: neste caso, bastaria digitar <strong>0003</strong> ou <strong>3</strong>.");
+    function passo_LeituraHidrometro() {
+        limparHistoricoEAdicionarBalao("<strong>Passo 4 de 6:</strong><br>Olhe para o mostrador físico do seu hidrômetro (relógio) e digite aqui apenas os <strong>números pretos</strong> atuais.<br><br>Veja o exemplo acima: neste caso, bastaria digitar <strong>0003</strong> ou <strong>3</strong>.");
         
         const boxZoom = document.createElement('div');
         boxZoom.className = 'bill-zoom-container';
-        boxZoom.innerHTML = `<img src="Foto_HM.jpg" class="zoom-hidrometro-exemplo" alt="Exemplo Hidrômetro">`;
+        boxZoom.innerHTML = `<img src="Foto_HM.jpg" class="zoom-hidrometro-exemplo" onerror="tratarErroImagem(this, 'hidrometro')" alt="Exemplo Hidrômetro">`;
         chatBox.insertBefore(boxZoom, chatBox.firstChild);
 
         const container = document.createElement('div');
         container.className = 'input-step-container';
         container.innerHTML = `
             <button class="btn-back" onclick="passo_DataProxima()">⬅️ Voltar à etapa anterior</button>
-            <input type="number" id="step_leituraAtual" placeholder="Exemplo: 3" value="${dadosContaAlta.leituraAtual}">
+            <input type="number" id="step_leituraHidrometro" placeholder="Exemplo: 820" value="${dadosContaAlta.leituraHidrometro}">
             <div class="button-group">
-                <button class="btn-option" onclick="salvar_LeituraAtual()">Avançar</button>
+                <button class="btn-option" onclick="salvar_LeituraHidrometro()">Avançar</button>
                 <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
             </div>
         `;
         chatBox.appendChild(container);
     }
 
-    function salvar_LeituraAtual() {
-        const valor = parseFloat(document.getElementById('step_leituraAtual').value);
+    function salvar_LeituraHidrometro() {
+        const valor = parseFloat(document.getElementById('step_leituraHidrometro').value);
         if(isNaN(valor)) { alert("Por favor, informe o valor dos números pretos do hidrômetro."); return; }
-        dadosContaAlta.leituraAtual = valor;
+        dadosContaAlta.leituraHidrometro = valor;
         passo_ViuHoje();
     }
 
-    // Passo 5: Pergunta se viu hoje ou outra data
     function passo_ViuHoje() {
         limparHistoricoEAdicionarBalao("<strong>Passo 5 de 6:</strong><br>Você viu esse número no hidrômetro hoje?");
         
         const container = document.createElement('div');
         container.className = 'input-step-container';
         container.innerHTML = `
-            <button class="btn-back" onclick="passo_LeituraAtual()">⬅️ Voltar à etapa anterior</button>
+            <button class="btn-back" onclick="passo_LeituraHidrometro()">⬅️ Voltar à etapa anterior</button>
             <div class="button-group">
                 <button class="btn-option" onclick="salvar_ViuHoje(true)">Sim, vi hoje</button>
                 <button class="btn-option" onclick="salvar_ViuHoje(false)">Não, foi em outro dia</button>
@@ -430,21 +780,21 @@
             const ano = hoje.getFullYear();
             const mes = String(hoje.getMonth() + 1).padStart(2, '0');
             const dia = String(hoje.getDate()).padStart(2, '0');
-            dadosContaAlta.dataAtual = `${ano}-${mes}-${dia}`;
+            dadosContaAlta.dataHidrometro = `${ano}-${mes}-${dia}`;
             passo_Moradores();
         } else {
-            passo_PedirDataAtual();
+            passo_PedirDataAtualManual();
         }
     }
 
-    function passo_PedirDataAtual() {
+    function passo_PedirDataAtualManual() {
         limparHistoricoEAdicionarBalao("Por favor, selecione abaixo a data em que você realizou essa leitura no hidrômetro:");
         
         const container = document.createElement('div');
         container.className = 'input-step-container';
         container.innerHTML = `
             <button class="btn-back" onclick="passo_ViuHoje()">⬅️ Voltar à etapa anterior</button>
-            <input type="date" id="step_dataAtual" value="${dadosContaAlta.dataAtual}">
+            <input type="date" id="step_dataHidrometro" value="${dadosContaAlta.dataHidrometro}">
             <div class="button-group">
                 <button class="btn-option" onclick="salvar_DataAtualManual()">Avançar</button>
                 <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
@@ -454,13 +804,12 @@
     }
 
     function salvar_DataAtualManual() {
-        const valor = document.getElementById('step_dataAtual').value;
+        const valor = document.getElementById('step_dataHidrometro').value;
         if(!valor) { alert("Por favor, selecione uma data válida."); return; }
-        dadosContaAlta.dataAtual = valor;
+        dadosContaAlta.dataHidrometro = valor;
         passo_Moradores();
     }
 
-    // Passo 6: Quantas pessoas residem/usam água
     function passo_Moradores() {
         limparHistoricoEAdicionarBalao("<strong>Passo 6 de 6:</strong><br>Por favor, informe quantas pessoas residem ou utilizam a água deste hidrômetro diariamente (digite apenas números maiores ou iguais a 0):");
         const container = document.createElement('div');
@@ -476,34 +825,34 @@
         chatBox.appendChild(container);
     }
 
-    // --- REGRAS DE CÁLCULO OMS E DICAS ---
     const textoDicasEconomia = `<br><br>💡 <strong>Dicas para ajudar a diminuir esse consumo:</strong><br>• Acumule roupas para lavar menos vezes por semana com a capacidade máxima;<br>• Reaproveite a água descartada da máquina de lavar para lavar calçadas e quintal;<br>• Desligue o chuveiro enquanto se ensaboa;<br>• Ensaboe toda a louça e depois enxágue tudo de uma vez;<br>• Mantenha a torneira fechada ao escovar os dentes.<br><br>📌 <strong>Dica adicional:</strong> Sempre que for viajar ou se ausentar por mais de 2 dias do imóvel, fechar o registro geral próximo ao hidrômetro.`;
 
-    function executarCalculoFinal() {
+    function ejecutarCalculoFinal() {
         const valorMoradores = parseInt(document.getElementById('step_moradores').value);
         if(isNaN(valorMoradores) || valorMoradores < 0) { alert("Por favor, informe um número de moradores válido (igual ou maior que 0)."); return; }
         dadosContaAlta.moradores = valorMoradores;
 
-        const dAtual = new Date(dadosContaAlta.dataAtual.replace(/-/g, '/'));
-        const dAnterior = new Date(dadosContaAlta.dataAnterior.replace(/-/g, '/'));
+        const dHidrometro = new Date(dadosContaAlta.dataHidrometro.replace(/-/g, '/'));
+        const dLeituraConta = new Date(dadosContaAlta.dataLeituraConta.replace(/-/g, '/'));
         const dProxima = new Date(dadosContaAlta.dataProxima.replace(/-/g, '/'));
         const msPorDia = 1000 * 60 * 60 * 24;
-        const diasDecorridos = Math.round((dAtual - dAnterior) / msPorDia);
-        const diasTotais = Math.round((dProxima - dAnterior) / msPorDia);
+        
+        const diasDecorridos = Math.round((dHidrometro - dLeituraConta) / msPorDia);
+        const diasTotais = Math.round((dProxima - dLeituraConta) / msPorDia);
 
         if (diasDecorridos <= 0 || diasTotais <= 0) {
-            alert("Erro nas datas digitadas. Verifique se as datas seguem a ordem cronológica correta.");
+            alert("Erro nas datas digitadas. Verifique se as datas seguem a ordem cronológica correta a partir da data da conta.");
             return;
         }
 
-        const consumoParcial = dadosContaAlta.leituraAtual - dadosContaAlta.leituraAnterior;
+        const consumoParcial = dadosContaAlta.leituraHidrometro - dadosContaAlta.leituraAtualConta;
         const consumoDiario = consumoParcial / diasDecorridos;
         const valorEstimadoProximaConta = Math.round(consumoDiario * diasTotais);
 
         limparHistoricoEAdicionarBalao("Analisando dados do consumo de acordo com a OMS...", false);
         
         agendarTimeout(() => {
-            let painelResultado = `Análise de Consumo Concluída! 📊<br><br>• Volume medido até o momento: <strong>${consumoParcial} m³</strong> em ${diasDecorridos} dias.<br>• Consumo médio diário: <strong>${consumoDiario.toFixed(2)} m³</strong>.<br>• Valor estimado para a próxima conta: <strong>${valorEstimadoProximaConta} m³</strong>.<br><br>`;
+            let painelResultado = `Análise de Consumo Concluída! 📊<br><br>• Volume medido no período atual: <strong>${consumoParcial} m³</strong> em ${diasDecorridos} dias.<br>• Consumo médio diário projetado: <strong>${consumoDiario.toFixed(2)} m³</strong>.<br>• Previsão total para o fechamento da conta: <strong>${valorEstimadoProximaConta} m³</strong>.<br><br>`;
 
             const moradoresValidos = dadosContaAlta.moradores || 1;
             const consumoPorPessoa = valorEstimadoProximaConta / moradoresValidos;
@@ -580,13 +929,14 @@
         agendarTimeout(() => carregarEtapa('interacaoZ'), 8000);
     }
 
-    // --- CÓDIGO DO ATENDIMENTO DE TITULARIDADE ---
+    // --- CÓDIGO DO ATENDIMENTO DE TITULARIDADE E FLUXO GERAL ---
     const fluxo = {
         inicio: {
             texto: "Olá! Sou a sua Assistente Virtual do CADU. Como posso te ajudar hoje?",
             opcoes: [
                 { texto: "Cadastro / Troca de Titularidade", proximo: "menu_titularidade" },
-                { texto: "Análise de Conta Alta", acao: () => iniciarApresentacaoContaAlta() }
+                { texto: "Análise de Conta Alta", acao: () => iniciarApresentacaoContaAlta() },
+                { texto: "Simular valor da conta", acao: () => iniciarSimulacaoFatura() }
             ]
         },
         menu_titularidade: {
@@ -649,7 +999,7 @@
             ]
         },
         rota_site: {
-            texto: `<strong>Orientações para a solicitação via Site:</strong><ul><li>Informe o CDC no campo correspondente e o DV no campo Dígito, então clique em 'Próximo passo';</li><li>No formulário, preencha com os dados exatos que deseja que apareçam na conta;</li><li>Marque a caixa de declaração, anexe os documentos necessários e clique em 'Enviar solicitação';</li><li><strong>Atenção:</strong> Não esqueça de salvar uma cópia do Protocolo para consultas futuras!</li></ul>`,
+            texto: `<strong>Orientações para a solicitação via Site:</strong><ul><li>Informe o CDC no campo correspondente e o DV no campo Dígito, então clique em 'Próximo passo';</li><li>No formulário, preencha com os dados exatos que deseja que apareçam na conta;</li><li>Marque a caixa de declaração, anexe os documentos necessários e clique em 'Enviar solicitação';</li><li><strong>Atenção:</strong> Não esqueça de salvar uma cópia do Protocolo para consultas futures!</li></ul>`,
             opcoes: [
                 { texto: "Ir para o Site do DAAE", acao: () => window.open('https://rioclarodaae.eportal.net.br/agencia/external.html#/atualizacaoCadastral', '_blank'), proximo: "interacaoZ" }
             ]
@@ -690,7 +1040,7 @@
         pergunta8: {
             texto: "Você recebeu o Termo de Entrega de Chaves?",
             opcoes: [
-                { texto: "Sim", proximo: "msg_P8_sim" },
+                { texto: "Sim", proximo: "pergunta8" },
                 { texto: "Não", proximo: "msg_P8_nao" },
                 { texto: "Voltar ao Menu", proximo: "inicio" }
             ]
