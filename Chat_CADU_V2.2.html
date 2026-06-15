@@ -177,8 +177,8 @@
         }
 
         .zoom-registro-atual-conta { transform: scale(3.5) translate(-23%, -70%); }
-        .zoom-data-atual-conta     { transform: scale(3.5) translate(-47%, -73%); }
-        .zoom-proxima-leitura      { transform: scale(3.5) translate(-70%, -73%); }
+        .zoom-data-atual-conta     { transform: scale(3.5) translate(-47%, -70%); }
+        .zoom-proxima-leitura      { transform: scale(3.5) translate(-70%, -70%); }
         
         .zoom-hidrometro-exemplo {
             width: 100% !important;
@@ -651,7 +651,7 @@
     }
 
     function passo_DataLeituraConta() {
-        limparHistoricoEAdicionarBalao("<strong>Passo 1 de 6:</strong><br>Localize a data da <strong>Leitura Atual</strong> informada em sua conta de água e insira abaixo:");
+        limparHistoricoEAdicionarBalao("<strong>Passo 1 de 6:</strong><br>Localize a data da <strong>Leitura</strong> informada em sua conta de água e insira abaixo:");
         const boxZoom = document.createElement('div');
         boxZoom.className = 'bill-zoom-container';
         boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-data-atual-conta" onerror="tratarErroImagem(this, 'conta')" alt="Conta DAAE">`;
@@ -704,7 +704,7 @@
     }
 
     function passo_DataProxima() {
-        limparHistoricoEAdicionarBalao("<strong>Passo 3 de 6:</strong><br>Localize e digite a data da Próxima Leitura prevista na conta:");
+        limparHistoricoEAdicionarBalao("<strong>Passo 3 de 6:</strong><br>Localize e digite a data da <strong>Próxima Leitura</strong> prevista na conta:");
         const boxZoom = document.createElement('div');
         boxZoom.className = 'bill-zoom-container';
         boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-proxima-leitura" onerror="tratarErroImagem(this, 'conta')" alt="Conta DAAE">`;
