@@ -816,7 +816,7 @@
         container.className = 'input-step-container';
         container.innerHTML = `
             <button class="btn-back" onclick="passo_ViuHoje()">⬅️ Voltar à etapa anterior</button>
-            <input type="number" id="step_moradores" min="0" placeholder="Exemplo: 3" value="${dadosContaAlta.moradores}">
+            <input type="number" id="step_moradores" min="0" placeholder="Exemplo: 4" value="${dadosContaAlta.moradores}">
             <div class="button-group">
                 <button class="btn-option" onclick="executarCalculoFinal()">Finalizar e Analisar Dados</button>
                 <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu</button>
@@ -827,9 +827,10 @@
 
     const textoDicasEconomia = `<br><br>💡 <strong>Dicas para ajudar a diminuir esse consumo:</strong><br>• Acumule roupas para lavar menos vezes por semana com a capacidade máxima;<br>• Reaproveite a água descartada da máquina de lavar para lavar calçadas e quintal;<br>• Desligue o chuveiro enquanto se ensaboa;<br>• Ensaboe toda a louça e depois enxágue tudo de uma vez;<br>• Mantenha a torneira fechada ao escovar os dentes.<br><br>📌 <strong>Dica adicional:</strong> Sempre que for viajar ou se ausentar por mais de 2 dias do imóvel, fechar o registro geral próximo ao hidrômetro.`;
 
-    function ejecutarCalculoFinal() {
+    // --- CORREÇÃO DO NOME DA FUNÇÃO DE "ejecutar" PARA "executar" ---
+    function executarCalculoFinal() {
         const valorMoradores = parseInt(document.getElementById('step_moradores').value);
-        if(isNaN(valorMoradores) || valorMoradores < 0) { alert("Por favor, informe um número de moradores válido (igual ou maior que 0)."); return; }
+        if(isNaN(valorMoradores) || valorMoradores < 0) { alert("Por favor, informe un número de moradores válido (igual ou maior que 0)."); return; }
         dadosContaAlta.moradores = valorMoradores;
 
         const dHidrometro = new Date(dadosContaAlta.dataHidrometro.replace(/-/g, '/'));
@@ -1036,7 +1037,7 @@
                 { texto: "Voltar ao Menu", proximo: "inicio" }
             ]
         },
-        msg_P7_nao: { texto: "Quando for entregar o imóvel, não esqueça de pedir o termo de entrega de chaves e nos contate novamente para remover o seu nome da conta.", opcoes: [], acaoAutomatica: "interacaoZ", delay: 6000 },
+        msg_P7_nao: { texto: "Quando for entregar o imóvel, não esqueça de pedir o termo de entrega de chaves and nos contate novamente para remover o seu nome da conta.", opcoes: [], acaoAutomatica: "interacaoZ", delay: 6000 },
         pergunta8: {
             texto: "Você recebeu o Termo de Entrega de Chaves?",
             opcoes: [
