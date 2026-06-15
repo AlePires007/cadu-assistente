@@ -327,7 +327,7 @@
 
     function sim_salvar_DataLeituraConta() {
         const valor = document.getElementById('sim_step_dataLeituraConta').value;
-        if(!valor) { alert("Por favor, informe a data da <strong>leitura</strong> da conta."); return; }
+        if(!valor) { alert("Por favor, informe a data da leitura da conta."); return; }
         dadosSimulacao.dataLeituraConta = valor;
         sim_passo_DataProxima();
     }
@@ -601,7 +601,7 @@
                 valorTotal = 188.84 + (15 * 24.06) + (20 * 35.82) + (faixa4 * 43.32);
                 detalheCalculo = `• Valor Fixo (Até 15 m³): R$ 188,84<br>` +
                                  `• Faixa de 16 a 30 m³: 15 m³ × R$ 24,06 = R$ 360,90<br>` +
-                                 `• Faixa de 31 a 50 m³: 20 m³ × R$ 35,82 = R$ 716,40<br>` +
+                                 `• Faixa de 31 a 50 m³: 20 m³ × R$ 35,82 = R; $ 716,40<br>` +
                                  `• Faixa de 51 a 100 m³: ${faixa4} m³ × R$ 43,32 = R$ ${(faixa4 * 43.32).toFixed(2)}`;
             } else {
                 const faixa5 = m3 - 100;
@@ -614,15 +614,45 @@
             }
         }
 
+        // --- ADIÇÃO DO TEXTO E BOTÃO SOLICITADO NO FINAL DA SIMULAÇÃO ---
         const textoResultado = `📋 <strong>Resultado da Simulação Financeira</strong><br><br>` +
                                `• Categoria: <strong>${categoriaSelecionada}</strong><br>` +
                                `• Previsão de Consumo Final: <strong>${m3} m³</strong><br><br>` +
                                `<strong>Demonstrativo das Faixas:</strong><br>${detalheCalculo}<br><br>` +
                                `💰 <strong>Valor Total Estimado:</strong><br>` +
-                               `<span style="font-size: 20px; color: var(--dark-blue); font-weight: bold;">R$ ${valorTotal.toFixed(2).replace('.', ',')}</span>`;
+                               `<span style="font-size: 20px; color: var(--dark-blue); font-weight: bold;">R$ ${valorTotal.toFixed(2).replace('.', ',')}</span><br><br>` +
+                               `💡 <em>Se acha que o valor da conta está alto, clique no botão abaixo para analisar a conta.</em>`;
         
         limparHistoricoEAdicionarBalao(textoResultado);
-        agendarTimeout(() => carregarEtapa('interacaoZ'), 9000);
+
+        // Removemos o agendarTimeout automático para interacaoZ e colocamos opções explícitas na tela
+        const containerBotoes = document.createElement('div');
+        containerBotoes.className = 'options-container';
+        containerBotoes.innerHTML = `
+            <button class="btn-option" onclick="atalho_SimulacaoParaContaAlta()">Analisar Conta Alta</button>
+            <button class="btn-option btn-secondary" onclick="carregarEtapa('inicio')">Voltar ao Menu Principal</button>
+            <button class="btn-option btn-secondary" onclick="carregarEtapa('interacaoZ')">Encerrar Atendimento</button>
+        `;
+        chatBox.appendChild(containerBotoes);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // --- NOVA FUNÇÃO DE ATALHO DA SIMULAÇÃO PARA A CONTA ALTA ---
+    function atalho_SimulacaoParaContaAlta() {
+        limparHistoricoEAdicionarBalao("Analisar Conta Alta", true);
+        
+        // Importa instantaneamente os dados já digitados para economizar tempo do usuário
+        dadosContaAlta = {
+            dataLeituraConta: dadosSimulacao.dataLeituraConta,
+            leituraAtualConta: dadosSimulacao.leituraAtualConta,
+            dataProxima: dadosSimulacao.dataProxima,
+            leituraHidrometro: dadosSimulacao.leituraHidrometro,
+            dataHidrometro: dadosSimulacao.dataHidrometro,
+            moradores: 0 // Definido como 0 para forçar a avaliação geral de consumo/vazamento direto
+        };
+
+        // Encaminha diretamente para a rotina final de cálculos sem passar pelos passos de 1 a 6
+        executarCalculoFinal();
     }
 
 
@@ -827,11 +857,16 @@
 
     const textoDicasEconomia = `<br><br>💡 <strong>Dicas para ajudar a diminuir esse consumo:</strong><br>• Acumule roupas para lavar menos vezes por semana com a capacidade máxima;<br>• Reaproveite a água descartada da máquina de lavar para lavar calçadas e quintal;<br>• Desligue o chuveiro enquanto se ensaboa;<br>• Ensaboe toda a louça e depois enxágue tudo de uma vez;<br>• Mantenha a torneira fechada ao escovar os dentes.<br><br>📌 <strong>Dica adicional:</strong> Sempre que for viajar ou se ausentar por mais de 2 dias do imóvel, fechar o registro geral próximo ao hidrômetro.`;
 
-    // --- CORREÇÃO DO NOME DA FUNÇÃO DE "ejecutar" PARA "executar" ---
+    // --- AJUSTE NA LEITURA DE MORADORES CASO VENHA PELO ATALHO DIRETO ---
     function executarCalculoFinal() {
-        const valorMoradores = parseInt(document.getElementById('step_moradores').value);
-        if(isNaN(valorMoradores) || valorMoradores < 0) { alert("Por favor, informe un número de moradores válido (igual ou maior que 0)."); return; }
-        dadosContaAlta.moradores = valorMoradores;
+        const inputMoradores = document.getElementById('step_moradores');
+        
+        // Se o elemento existir na tela (fluxo padrão), lemos o valor normalmente
+        if (inputMoradores) {
+            const valorMoradores = parseInt(inputMoradores.value);
+            if(isNaN(valorMoradores) || valorMoradores < 0) { alert("Por favor, informe un número de moradores válido (igual ou maior que 0)."); return; }
+            dadosContaAlta.moradores = valorMoradores;
+        }
 
         const dHidrometro = new Date(dadosContaAlta.dataHidrometro.replace(/-/g, '/'));
         const dLeituraConta = new Date(dadosContaAlta.dataLeituraConta.replace(/-/g, '/'));
@@ -855,34 +890,36 @@
         agendarTimeout(() => {
             let painelResultado = `Análise de Consumo Concluída! 📊<br><br>• Volume medido no período atual: <strong>${consumoParcial} m³</strong> em ${diasDecorridos} dias.<br>• Consumo médio diário projetado: <strong>${consumoDiario.toFixed(2)} m³</strong>.<br>• Previsão total para o fechamento da conta: <strong>${valorEstimadoProximaConta} m³</strong>.<br><br>`;
 
-            const moradoresValidos = dadosContaAlta.moradores || 1;
-            const consumoPorPessoa = valorEstimadoProximaConta / moradoresValidos;
-            const referenciaOMS = 6; 
+            const moradoresValidos = dadosContaAlta.moradores || 0;
 
-            if (dadosContaAlta.moradores === 0) {
-                painelResultado += `Como o número de moradores foi definido como 0, segue a análise geral. Se notar um volume muito alto, recomendamos verificar vazamentos estruturais.`;
+            if (moradoresValidos === 0) {
+                painelResultado += `Segue a análise geral projetada. Se notar um volume muito alto para os seus padrões práticos, recomendamos verificar a presença de vazamentos estruturais ocultos.`;
                 limparHistoricoEAdicionarBalao(painelResultado);
                 solicitarDecisaoVazamento();
-            }
-            else if (consumoPorPessoa < referenciaOMS) {
-                painelResultado += `🎉 <strong>Parabéns!</strong> O seu consumo estimado por habitante (${consumoPorPessoa.toFixed(1)} m³) é <strong>inferior</strong> ao referencial da OMS de 6m³ ao mês por pessoa. Continue assim!` + textoDicasEconomia;
-                limparHistoricoEAdicionarBalao(painelResultado);
-                agendarTimeout(() => carregarEtapa('interacaoZ'), 12000);
-            } 
-            else if (Math.abs(consumoPorPessoa - referenciaOMS) < 0.1) {
-                painelResultado += `O consumo medido está <strong>próximo ao referencial da OMS</strong>, onde cada pessoa gasta em média 6m³ ao mês. O consumo é previsto.` + textoDicasEconomia;
-                limparHistoricoEAdicionarBalao(painelResultado);
-                agendarTimeout(() => carregarEtapa('interacaoZ'), 12000);
-            } 
-            else if (consumoPorPessoa > referenciaOMS && (consumoPorPessoa - referenciaOMS) <= 3) {
-                painelResultado += `Identificamos que o consumo médio por morador (${consumoPorPessoa.toFixed(1)} m³) variou em até 3m³ <strong>acima da referência de consumo da OMS</strong> (que é de 6m³ por pessoa ao mês). Você pode ajudar a diminuir esse consumo com pequenas mudanças:` + textoDicasEconomia;
-                limparHistoricoEAdicionarBalao(painelResultado);
-                agendarTimeout(() => carregarEtapa('interacaoZ'), 15000);
-            } 
-            else {
-                painelResultado += `⚠️ <strong>Alerta de Consumo Elevado!</strong> O consumo estimado por pessoa está em <strong>${consumoPorPessoa.toFixed(1)} m³</strong>, ultrapassando consideravelmente a média recomendada pela OMS.<br><br>Gostaria de realizar testes práticos para verificar se há vazamentos ocultos?`;
-                limparHistoricoEAdicionarBalao(painelResultado);
-                solicitarDecisaoVazamento();
+            } else {
+                const consumoPorPessoa = valorEstimadoProximaConta / moradoresValidos;
+                const referenciaOMS = 6; 
+
+                if (consumoPorPessoa < referenciaOMS) {
+                    painelResultado += `🎉 <strong>Parabéns!</strong> O seu consumo estimado por habitante (${consumoPorPessoa.toFixed(1)} m³) é <strong>inferior</strong> ao referencial da OMS de 6m³ ao mês por pessoa. Continue assim!` + textoDicasEconomia;
+                    limparHistoricoEAdicionarBalao(painelResultado);
+                    agendarTimeout(() => carregarEtapa('interacaoZ'), 12000);
+                } 
+                else if (Math.abs(consumoPorPessoa - referenciaOMS) < 0.1) {
+                    painelResultado += `O consumo medido está <strong>próximo ao referencial da OMS</strong>, onde cada pessoa gasta em média 6m³ ao mês. O consumo é previsto.` + textoDicasEconomia;
+                    limparHistoricoEAdicionarBalao(painelResultado);
+                    agendarTimeout(() => carregarEtapa('interacaoZ'), 12000);
+                } 
+                else if (consumoPorPessoa > referenciaOMS && (consumoPorPessoa - referenciaOMS) <= 3) {
+                    painelResultado += `Identificamos que o consumo médio por morador (${consumoPorPessoa.toFixed(1)} m³) variou em até 3m³ <strong>acima da referência de consumo da OMS</strong> (que é de 6m³ por pessoa ao mês). Você pode ajudar a diminuir esse consumo com pequenas mudanças:` + textoDicasEconomia;
+                    limparHistoricoEAdicionarBalao(painelResultado);
+                    agendarTimeout(() => carregarEtapa('interacaoZ'), 15000);
+                } 
+                else {
+                    painelResultado += `⚠️ <strong>Alerta de Consumo Elevado!</strong> O consumo estimado por pessoa está em <strong>${consumoPorPessoa.toFixed(1)} m³</strong>, ultrapassando consideravelmente a média recomendada pela OMS.<br><br>Gostaria de realizar testes práticos para verificar se há vazamentos ocultos?`;
+                    limparHistoricoEAdicionarBalao(painelResultado);
+                    solicitarDecisaoVazamento();
+                }
             }
         }, 1500);
     }
@@ -900,6 +937,7 @@
         }, 1000);
     }
 
+    function flujo_VazamentoDetectado() { fluxo_VazamentoDetectado(); } // Tratamento legado caso usem com 'j'
     function fluxo_VazamentoDetectado() {
         limparHistoricoEAdicionarBalao("Como a projeção deu alta, há indícios de possíveis <strong>vazamentos ocultos</strong>. Escolha um dos testes recomendados abaixo:");
         const containerBotoes = document.createElement('div');
@@ -1052,7 +1090,7 @@
             texto: "A Empresa é dona ou inquilina?",
             opcoes: [
                 { texto: "Dona", proximo: "pergunta10" },
-                { texto: "Inquilina", proximo: "pergunta11" },
+                { texto: "Não", proximo: "pergunta11" },
                 { texto: "Voltar ao Menu", proximo: "inicio" }
             ]
         },
