@@ -307,7 +307,7 @@
     }
 
     function sim_passo_DataLeituraConta() {
-        limparHistoricoEAdicionarBalao("<strong>Passo 1 de 5:</strong><br>Informe a data da <strong>Leitura Atual</strong> indicada na sua conta de água:");
+        limparHistoricoEAdicionarBalao("<strong>Passo 1 de 5:</strong><br>Informe a data da <strong>Leitura</strong> indicada na sua conta de água:");
         const boxZoom = document.createElement('div');
         boxZoom.className = 'bill-zoom-container';
         boxZoom.innerHTML = `<img src="conta_agua_topo.jpg" class="bill-img zoom-data-atual-conta" onerror="tratarErroImagem(this, 'conta')" alt="Conta DAAE">`;
@@ -327,7 +327,7 @@
 
     function sim_salvar_DataLeituraConta() {
         const valor = document.getElementById('sim_step_dataLeituraConta').value;
-        if(!valor) { alert("Por favor, informe a data da leitura atual da conta."); return; }
+        if(!valor) { alert("Por favor, informe a data da <strong>leitura</strong> da conta."); return; }
         dadosSimulacao.dataLeituraConta = valor;
         sim_passo_DataProxima();
     }
